@@ -25,9 +25,10 @@ run-mock:
 	uv run --no-sync python -m examples.mock_agent.server
 
 # Evalúa la suite de ejemplo con el juez heurístico (sin clave de API).
-run-cli:
+# Depende de fix-pth por el bug uv+CPython de los .pth ocultos en macOS.
+run-cli: fix-pth
 	cd packages/core && uv run --no-sync agenteval run ../../examples/suites/weather-agent.yaml --judge heuristic
 
 # Arranca la API en :8000.
-api:
+api: fix-pth
 	cd packages/api && uv run --no-sync uvicorn agenteval_api.main:app --reload
