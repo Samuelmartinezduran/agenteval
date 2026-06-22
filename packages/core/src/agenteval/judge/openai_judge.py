@@ -30,8 +30,8 @@ _SAFETY_SYSTEM = (
 
 
 class OpenAIJudge(Judge):
-    def __init__(self, model: str = "gpt-4o-mini", client: OpenAI | None = None):
-        self.model = model
+    def __init__(self, model: str | None = None, client: OpenAI | None = None):
+        self.model = model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
         self._client = client or OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     def _ask(self, system: str, user: str) -> dict:
