@@ -49,18 +49,20 @@ cd packages/core
 uv run agenteval run ../../examples/suites/weather-agent.yaml
 ```
 
-## Stack completo (API + dashboard) con Docker
+## Stack completo (API + dashboard) con Docker — un comando
 
 ```bash
-cp .env.example .env      # ajusta OPENAI_API_KEY si quieres el juez real
 docker compose up --build
 ```
 
-- API (FastAPI): http://localhost:8000 · docs en `/docs`
-- Dashboard (React): http://localhost:5173
+Esto levanta todo y **deja el dashboard listo para usar**: incluye un agente de
+juguete y precarga la suite de ejemplo automáticamente.
 
-Crea una suite (`POST /suites`), lánzala (`POST /runs`) y explora los resultados
-por dimensión en el dashboard.
+- Dashboard (React): http://localhost:5173 → pulsa **▶ weather-agent** y verás los scores
+- API (FastAPI): http://localhost:8000 · docs en `/docs`
+
+Por defecto usa el juez heurístico (sin coste). Para el juez real, crea un `.env`
+con `OPENAI_API_KEY=...` y `AGENTEVAL_JUDGE=openai` antes de levantar el stack.
 
 ## El contrato del agente (OpenAI-compatible)
 

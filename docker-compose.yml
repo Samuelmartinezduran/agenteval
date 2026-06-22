@@ -15,6 +15,14 @@ services:
       timeout: 3s
       retries: 10
 
+  # Agente de juguete (mismo image que la API, distinto comando). Sirve para
+  # probar el stack de inmediato sin levantar nada en el host.
+  mock-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: sh -c "cd /app && python -m examples.mock_agent.server"
+
   api:
     build:
       context: .
@@ -24,9 +32,14 @@ services:
       AGENTEVAL_JUDGE: ${AGENTEVAL_JUDGE:-heuristic}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AGENTEVAL_CORS_ORIGINS: '["http://localhost:5173"]'
+      # Precarga la suite de ejemplo apuntando al servicio mock-agent.
+      AGENTEVAL_SEED_SUITE: /app/examples/suites/weather-agent.yaml
+      AGENTEVAL_SEED_AGENT_URL: http://mock-agent:9000
     depends_on:
       db:
         condition: service_healthy
+      mock-agent:
+        condition: service_started
     ports:
       - "8000:8000"
 

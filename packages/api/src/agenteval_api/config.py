@@ -17,5 +17,11 @@ class Settings(BaseSettings):
     # Orígenes permitidos para el dashboard (CORS).
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Seed opcional al arrancar: ruta a una suite YAML a cargar si la BD está
+    # vacía (para que `docker compose up` deje el dashboard listo para usar).
+    seed_suite: str | None = None
+    # Sobrescribe el agent.url de la suite seedeada (p. ej. el servicio del mock).
+    seed_agent_url: str | None = None
+
 
 settings = Settings()
