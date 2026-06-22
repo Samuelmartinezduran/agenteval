@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agenteval
+      POSTGRES_PASSWORD: agenteval
+      POSTGRES_DB: agenteval
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agenteval"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      AGENTEVAL_DATABASE_URL: postgresql+psycopg://agenteval:agenteval@db:5432/agenteval
+      AGENTEVAL_JUDGE: ${AGENTEVAL_JUDGE:-heuristic}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENTEVAL_CORS_ORIGINS: '["http://localhost:5173"]'
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

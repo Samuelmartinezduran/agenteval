@@ -1,0 +1,14 @@
+[project]
+name = "agenteval-workspace"
+version = "0.0.0"
+description = "Workspace raíz de agenteval (core + api)."
+requires-python = ">=3.10"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+agenteval = { workspace = true }
+
+[tool.uv]
+package = false
