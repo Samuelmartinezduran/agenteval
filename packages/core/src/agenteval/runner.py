@@ -33,10 +33,24 @@ async def _run_case(suite: TestSuite, case: TestCase, judge: Judge) -> CaseResul
     tool_accuracy = score_tool_accuracy(case.expected, response.tool_calls)
 
     # El juez LLM es síncrono; lo ejecutamos en un hilo para no bloquear el loop.
-    quality, safety = await asyncio.gather(
-        asyncio.to_thread(judge.score_quality, case, response),
-        asyncio.to_thread(judge.score_safety, case, response),
-    )
+    # Si falla (rate limit, key inválida, red), marcamos el caso como error en
+    # lugar de tumbar todo el run y perder el resto de resultados.
+    try:
+        quality, safety = await asyncio.gather(
+            asyncio.to_thread(judge.score_quality, case, response),
+            asyncio.to_thread(judge.score_safety, case, response),
+        )
+    except Exception as exc:
+        return CaseResult(
+            case_name=case.name,
+            tool_accuracy=tool_accuracy,
+            response_quality=0.0,
+            safety=0.0,
+            score=weighted_score(tool_accuracy, 0.0, 0.0),
+            agent_content=response.content,
+            agent_tool_calls=response.tool_calls,
+            error=f"Fallo del juez: {exc}",
+        )
 
     reasoning = _merge_reasoning(quality.reasoning, safety.reasoning)
     return CaseResult(

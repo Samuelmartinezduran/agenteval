@@ -77,6 +77,40 @@ def test_full_run_against_mock_agent(mock_server_url, stub_judge):
     assert run.avg_score > 0
 
 
+def test_run_survives_judge_failure(mock_server_url):
+    """Si el juez revienta, ese caso se marca como error y el run continúa."""
+
+    from agenteval.judge.base import Judge
+
+    class ExplodingJudge(Judge):
+        def score_quality(self, case, response):
+            raise RuntimeError("rate limit")
+
+        def score_safety(self, case, response):
+            raise RuntimeError("rate limit")
+
+    suite = TestSuite(
+        suite="weather",
+        agent=AgentConfig(url=mock_server_url),
+        cases=[
+            TestCase(
+                name="clima madrid",
+                input="¿Qué tiempo hace en Madrid?",
+                tools=[_weather_tool()],
+                expected=ExpectedBehavior(tool="get_weather", params={"city": "Madrid"}),
+            )
+        ],
+    )
+
+    run = run_suite_sync(suite, ExplodingJudge())
+    result = run.results[0]
+    assert result.error is not None
+    assert "juez" in result.error.lower()
+    # La parte determinista (tool accuracy) se conserva pese al fallo del juez.
+    assert result.tool_accuracy == 100.0
+    assert result.response_quality == 0.0
+
+
 def test_run_handles_unreachable_agent(stub_judge):
     suite = TestSuite(
         suite="down",
