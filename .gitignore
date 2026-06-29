@@ -21,3 +21,7 @@ frontend/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Ficheros de trabajo locales (capturas de diseño, suites de prueba personales)
+Capturas_Gemini/
+mi-prueba.yaml

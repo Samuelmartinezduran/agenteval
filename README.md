@@ -1,11 +1,20 @@
 # agenteval
 
+[![CI](https://github.com/Samuelmartinezduran/agenteval/actions/workflows/ci.yml/badge.svg)](https://github.com/Samuelmartinezduran/agenteval/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Framework open source para evaluar agentes LLM con function calling / tool use.**
 
 agenteval es **agnóstico**: funciona con cualquier agente que exponga un endpoint
 HTTP compatible con OpenAI. Defines tus casos de prueba en YAML, los ejecutas
 contra tu agente y obtienes una **puntuación por dimensión** (0-100) por cada caso,
 desde la línea de comandos o desde un dashboard visual.
+
+![Dashboard de agenteval](docs/dashboard.png)
+
+> Detalle de una ejecución, con score por dimensión y el razonamiento del juez:
+>
+> ![Detalle de una ejecución](docs/run-detail.png)
 
 ```
 ┌──────────┐   POST {messages, tools}   ┌──────────────┐
