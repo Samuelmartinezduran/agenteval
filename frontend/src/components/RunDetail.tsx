@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type RunDetail as RunDetailData } from "../api";
-import { DimensionBar, ScoreBadge } from "./Score";
+import { DimensionBar, getFeedbackColors } from "./Score";
 
 export function RunDetail({ runId, onBack }: { runId: number; onBack: () => void }) {
   const [run, setRun] = useState<RunDetailData | null>(null);
@@ -10,58 +10,160 @@ export function RunDetail({ runId, onBack }: { runId: number; onBack: () => void
     api.getRun(runId).then(setRun).catch((e) => setError(String(e)));
   }, [runId]);
 
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!run) return <p className="text-gray-500">Cargando…</p>;
+  if (error) {
+    return (
+      <main className="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg flex flex-col gap-stack-lg">
+        <div className="bg-error-container text-on-error-container p-4 rounded-lg font-body-md shadow-sm">
+          {error}
+        </div>
+        <button onClick={onBack} className="self-start mt-4 px-4 py-2 bg-surface-container rounded-lg font-label-sm text-on-surface">Volver</button>
+      </main>
+    );
+  }
+
+  if (!run) {
+    return (
+      <main className="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg flex flex-col gap-stack-lg items-center justify-center min-h-[50vh]">
+        <div className="font-body-md text-on-surface-variant">Cargando...</div>
+      </main>
+    );
+  }
+
+  const globalColors = getFeedbackColors(run.avg_score);
 
   return (
-    <div>
-      <button onClick={onBack} className="mb-4 text-sm text-blue-600 hover:underline">
-        ← Volver a la lista
-      </button>
+    <main className="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg flex flex-col gap-stack-lg w-full flex-grow">
+      {/* Back Navigation Context */}
+      <nav aria-label="Back">
+        <button 
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors duration-200 font-label-sm text-label-sm bg-surface-container-lowest px-3 py-1.5 rounded-full border border-outline-variant shadow-sm w-fit group"
+        >
+          <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+          Volver
+        </button>
+      </nav>
 
-      <h2 className="text-xl font-bold">{run.suite_name}</h2>
-      <p className="mb-6 text-sm text-gray-500">
-        Run #{run.id} · {new Date(run.created_at).toLocaleString()}
-      </p>
+      {/* Header Section */}
+      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-stack-md border-b border-outline-variant pb-stack-lg">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-headline-lg-mobile md:font-headline-xl text-headline-lg-mobile md:text-headline-xl text-on-surface">
+              {run.suite_name}
+            </h1>
+            <span className="px-2.5 py-1 bg-surface-container rounded-md border border-outline-variant font-mono-code text-mono-code text-on-surface-variant">
+              Run #{run.id}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-on-surface-variant font-body-md text-body-md">
+            <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+            <time dateTime={run.created_at}>
+              {new Date(run.created_at).toLocaleString()}
+            </time>
+          </div>
+        </div>
+        {/* Large Score Gauge */}
+        <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant shadow-sm flex items-center gap-4 min-w-[200px]">
+          <div className="relative w-[64px] h-[64px] flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path className="text-surface-container-highest" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
+              <path className={globalColors.text} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${run.avg_score}, 100`} strokeLinecap="round" strokeWidth="3"></path>
+            </svg>
+            <span className={`absolute font-headline-md text-headline-md ${globalColors.text}`}>
+              {run.avg_score.toFixed(0)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Score Global</span>
+            <span className={`font-body-md text-body-md ${globalColors.text}`}>
+              {run.avg_score >= 80 ? "Excelente" : run.avg_score >= 50 ? "Regular" : "Bajo"}
+            </span>
+          </div>
+        </div>
+      </header>
 
-      <div className="mb-8 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Metric Cards Row */}
+      <section aria-label="Run Metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
         <DimensionBar label="Tool accuracy" score={run.avg_tool_accuracy} />
         <DimensionBar label="Response quality" score={run.avg_response_quality} />
         <DimensionBar label="Safety" score={run.avg_safety} />
-        <DimensionBar label="Score global" score={run.avg_score} />
-      </div>
+        <DimensionBar label="Score global" score={run.avg_score} isGlobal />
+      </section>
 
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b text-left text-gray-500">
-            <th className="py-2">Caso</th>
-            <th className="py-2 text-right">Tool</th>
-            <th className="py-2 text-right">Quality</th>
-            <th className="py-2 text-right">Safety</th>
-            <th className="py-2 text-right">Score</th>
-          </tr>
-        </thead>
-        <tbody>
-          {run.results.map((r) => (
-            <tr key={r.id} className="border-b align-top">
-              <td className="py-2">
-                <div className="font-medium">{r.case_name}</div>
-                {r.error ? (
-                  <div className="text-red-600">{r.error}</div>
-                ) : (
-                  r.reasoning && <div className="text-gray-500">{r.reasoning}</div>
-                )}
-              </td>
-              <td className="py-2 text-right">{r.tool_accuracy.toFixed(0)}</td>
-              <td className="py-2 text-right">{r.response_quality.toFixed(0)}</td>
-              <td className="py-2 text-right">{r.safety.toFixed(0)}</td>
-              <td className="py-2 text-right">
-                <ScoreBadge score={r.score} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      {/* Cases Section */}
+      <section aria-labelledby="cases-heading" className="flex flex-col gap-stack-md mt-stack-sm">
+        <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+          <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface" id="cases-heading">
+            Casos
+          </h2>
+          <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface-container px-2 py-1 rounded-md">
+            {run.results.length} casos
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {run.results.map((c) => {
+            const hasError = !!c.error;
+            const cardColors = getFeedbackColors(c.score);
+            const isErrorStyle = hasError || c.score < 50;
+            
+            return (
+              <article key={c.id} className={`bg-surface-container-lowest rounded-2xl border shadow-sm overflow-hidden flex flex-col transition-colors duration-200 group relative ${isErrorStyle ? 'border-error/30 hover:border-error/60' : 'border-outline-variant hover:border-primary-fixed-dim'}`}>
+                {isErrorStyle && <div className="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>}
+                
+                <div className={`p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${isErrorStyle ? 'pl-6' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 ${isErrorStyle ? 'bg-error-container/50 border-error/30 text-error' : 'bg-secondary-container/30 border-secondary-container text-secondary'}`}>
+                      <span className="material-symbols-outlined text-[18px]">
+                        {isErrorStyle ? "error" : "check_circle"}
+                      </span>
+                    </div>
+                    <h3 className={`font-headline-md text-headline-md transition-colors ${isErrorStyle ? 'text-on-surface group-hover:text-error' : 'text-on-surface group-hover:text-primary'}`}>
+                      {c.case_name}
+                    </h3>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-4 lg:gap-6">
+                    <div className="flex gap-4 sm:gap-6 px-4 py-2 bg-surface-container rounded-lg border border-outline-variant/50">
+                      <div className="flex flex-col items-center">
+                        <span className="font-label-sm text-label-sm text-on-surface-variant mb-0.5">Tool</span>
+                        <span className={`font-mono-code text-mono-code ${c.tool_accuracy < 50 ? 'text-error font-medium' : 'text-on-surface'}`}>{c.tool_accuracy.toFixed(0)}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-label-sm text-label-sm text-on-surface-variant mb-0.5">Quality</span>
+                        <span className={`font-mono-code text-mono-code ${c.response_quality < 50 ? 'text-error font-medium' : 'text-on-surface'}`}>{c.response_quality.toFixed(0)}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-label-sm text-label-sm text-on-surface-variant mb-0.5">Safety</span>
+                        <span className={`font-mono-code text-mono-code ${c.safety < 50 ? 'text-error font-medium' : 'text-on-surface'}`}>{c.safety.toFixed(0)}</span>
+                      </div>
+                    </div>
+                    <div className={`px-4 py-2 rounded-full border flex items-center gap-2 ${cardColors.bgSoft} ${cardColors.border}`}>
+                      <span className={`font-label-sm text-label-sm uppercase ${cardColors.text}`}>Score</span>
+                      <span className={`font-headline-md text-headline-md ${cardColors.text}`}>{c.score.toFixed(0)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`px-5 py-4 flex gap-3 ${isErrorStyle ? 'bg-[#1e1e24] border-t border-error/20' : 'bg-surface border-t border-outline-variant/50'}`}>
+                  <span className={`material-symbols-outlined text-[18px] mt-0.5 flex-shrink-0 ${isErrorStyle ? 'text-error' : 'text-on-surface-variant'}`}>
+                    {hasError ? 'terminal' : 'psychology'}
+                  </span>
+                  {hasError ? (
+                    <code className="font-mono-code text-mono-code text-error/90 whitespace-pre-wrap break-all">
+                      Error: {c.error}
+                    </code>
+                  ) : (
+                    <p className="font-body-md text-body-md text-on-surface-variant">
+                      {c.reasoning || "Sin comentarios."}
+                    </p>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </main>
   );
 }

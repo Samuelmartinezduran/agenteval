@@ -6,25 +6,47 @@ export default function App() {
   const [openRun, setOpenRun] = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="border-b bg-white">
-        <div className="mx-auto max-w-4xl px-6 py-4">
-          <h1 className="text-lg font-bold">
-            agent<span className="text-blue-600">eval</span>
-          </h1>
-          <p className="text-sm text-gray-500">
-            Evaluación de agentes LLM con function calling
-          </p>
+    <>
+      <header className="bg-surface-container-lowest border-b border-outline-variant shadow-sm w-full sticky top-0 z-50">
+        <div className="flex justify-between items-center h-16 w-full px-gutter max-w-container-max mx-auto">
+          <div className="flex items-center gap-2">
+            <div className="font-headline-lg text-headline-lg flex tracking-tight">
+              <span className="text-on-surface font-extrabold">agent</span>
+              <span className="text-primary font-extrabold">eval</span>
+            </div>
+            <span className="hidden md:inline-block ml-4 text-outline font-label-sm text-label-sm border-l border-outline-variant pl-4">
+              Evaluación de agentes LLM con function calling
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="text-on-surface-variant hover:bg-surface-container-low transition-all duration-200 p-2 rounded-full active:scale-95 flex items-center justify-center">
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
+            <button className="text-on-surface-variant hover:bg-surface-container-low transition-all duration-200 p-2 rounded-full active:scale-95 flex items-center justify-center">
+              <span className="material-symbols-outlined">help_outline</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-8">
-        {openRun === null ? (
-          <RunList onOpen={setOpenRun} />
-        ) : (
-          <RunDetail runId={openRun} onBack={() => setOpenRun(null)} />
-        )}
-      </main>
-    </div>
+      {openRun === null ? (
+        <RunList onOpen={setOpenRun} />
+      ) : (
+        <RunDetail runId={openRun} onBack={() => setOpenRun(null)} />
+      )}
+
+      <footer className="bg-surface-container border-t border-outline-variant w-full mt-auto">
+        <div className="flex flex-col md:flex-row justify-between items-center w-full px-gutter max-w-container-max mx-auto py-stack-lg gap-6">
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <div className="font-headline-md text-headline-md font-bold flex tracking-tight">
+              <span className="text-on-surface">agent</span><span className="text-primary">eval</span>
+            </div>
+            <p className="font-body-md text-body-md text-on-surface-variant text-center md:text-left">
+              © {new Date().getFullYear()} agenteval. Evaluación de agentes LLM con function calling.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }
