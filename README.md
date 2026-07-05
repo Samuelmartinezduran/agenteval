@@ -58,6 +58,14 @@ cd packages/core
 uv run agenteval run ../../examples/suites/weather-agent.yaml
 ```
 
+Opciones útiles de `agenteval run`:
+
+- `--concurrency N` — máximo de casos evaluados en paralelo (default 5, evita rate limits).
+- `--output resultados.json` — guarda el run en JSON.
+- `--baseline resultados.json` — compara contra un run previo y muestra el delta por caso
+  (ideal para detectar regresiones en CI junto con `--fail-under`).
+- `--fail-under 80` — sale con código 1 si el score medio no llega al umbral.
+
 ## Stack completo (API + dashboard) con Docker — un comando
 
 ```bash
@@ -69,6 +77,11 @@ juguete y precarga la suite de ejemplo automáticamente.
 
 - Dashboard (React): http://localhost:5173 → pulsa **▶ weather-agent** y verás los scores
 - API (FastAPI): http://localhost:8000 · docs en `/docs`
+
+Los runs se ejecutan **en background**: `POST /runs` responde al instante con el run en
+estado `running` y el dashboard hace polling hasta que pasa a `completed` (o `failed`).
+Desde el detalle de un run puedes **compararlo** con otro run de la misma suite
+(`GET /runs/{id}/compare/{other_id}`) para ver el delta de score por caso.
 
 Por defecto usa el juez heurístico (sin coste). Para el juez real, crea un `.env`
 con `OPENAI_API_KEY=...` y `AGENTEVAL_JUDGE=openai` antes de levantar el stack.
@@ -108,6 +121,16 @@ cases:
       tool: get_weather          # tool: null = no debería llamar a ninguna tool
       params: { city: Madrid }
     quality_rubric: "Debe consultar el clima de Madrid."
+```
+
+Los `params` esperados se comparan por igualdad (case-insensitive) o con matchers:
+
+```yaml
+expected:
+  tool: get_weather
+  params:
+    city: { contains: madrid }   # el valor real debe contener el texto
+    date: { regex: '^\d{4}-\d{2}-\d{2}$' }  # o casar con la regex
 ```
 
 Valida una suite sin ejecutarla con `agenteval validate <suite.yaml>`.

@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { RunList } from "./components/RunList";
 import { RunDetail } from "./components/RunDetail";
+import { RunCompare } from "./components/RunCompare";
 
 export default function App() {
-  const [openRun, setOpenRun] = useState<number | null>(null);
-
   return (
     <>
       <header className="bg-surface-container-lowest border-b border-outline-variant shadow-sm w-full sticky top-0 z-50">
@@ -29,11 +28,12 @@ export default function App() {
         </div>
       </header>
 
-      {openRun === null ? (
-        <RunList onOpen={setOpenRun} />
-      ) : (
-        <RunDetail runId={openRun} onBack={() => setOpenRun(null)} />
-      )}
+      <Routes>
+        <Route path="/" element={<RunList />} />
+        <Route path="/runs/:id" element={<RunDetail />} />
+        <Route path="/runs/:id/compare/:otherId" element={<RunCompare />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <footer className="bg-surface-container border-t border-outline-variant w-full mt-auto">
         <div className="flex flex-col md:flex-row justify-between items-center w-full px-gutter max-w-container-max mx-auto py-stack-lg gap-6">

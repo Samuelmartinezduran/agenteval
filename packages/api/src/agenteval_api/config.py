@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # Juez por defecto de la API: 'heuristic' (sin coste) u 'openai'.
     judge: str = "heuristic"
 
+    # Máximo de casos evaluados en paralelo por run (evita rate limits).
+    concurrency: int = 5
+
     # Orígenes permitidos para el dashboard (CORS).
     cors_origins: list[str] = ["http://localhost:5173"]
 

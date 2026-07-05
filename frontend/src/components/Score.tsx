@@ -6,6 +6,23 @@ export function getFeedbackColors(score: number): { bg: string; text: string; do
   return { bg: "bg-feedback-red-bg", text: "text-feedback-red-text", dot: "bg-feedback-red-text", border: "border-feedback-red-text", bgSoft: "bg-feedback-red-bg/30" };
 }
 
+import type { RunStatus } from "../api";
+
+export function StatusChip({ status }: { status: RunStatus }) {
+  const styles: Record<RunStatus, { classes: string; icon: string; label: string }> = {
+    running: { classes: "bg-feedback-amber-bg text-feedback-amber-text", icon: "progress_activity", label: "En curso" },
+    completed: { classes: "bg-feedback-green-bg text-feedback-green-text", icon: "check_circle", label: "Completado" },
+    failed: { classes: "bg-feedback-red-bg text-feedback-red-text", icon: "error", label: "Fallido" },
+  };
+  const s = styles[status];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${s.classes} font-label-sm text-label-sm`}>
+      <span className={`material-symbols-outlined text-[14px] ${status === "running" ? "animate-spin" : ""}`}>{s.icon}</span>
+      {s.label}
+    </span>
+  );
+}
+
 export function ScoreBadge({ score }: { score: number }) {
   const colors = getFeedbackColors(score);
   return (

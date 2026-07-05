@@ -15,8 +15,8 @@ import typer
 from rich.console import Console
 
 from .loader import SuiteLoadError, load_suite
-from .report import render_table, to_dict
-from .runner import run_suite_sync
+from .report import render_baseline_diff, render_table, to_dict
+from .runner import DEFAULT_CONCURRENCY, run_suite_sync
 
 app = typer.Typer(help="Evalúa agentes LLM con function calling / tool use.", no_args_is_help=True)
 console = Console()
@@ -49,6 +49,17 @@ def run(
         "--judge",
         help="Juez a usar: 'openai' (GPT-4o-mini) o 'heuristic' (sin LLM, para demos/CI).",
     ),
+    concurrency: int = typer.Option(
+        DEFAULT_CONCURRENCY,
+        "--concurrency",
+        min=1,
+        help="Máximo de casos evaluados en paralelo (evita rate limits del agente/juez).",
+    ),
+    baseline: Path | None = typer.Option(
+        None,
+        "--baseline",
+        help="JSON de un run previo (generado con --output) para mostrar deltas por caso.",
+    ),
 ):
     """Ejecuta una suite contra su agente y puntúa cada caso."""
 
@@ -65,7 +76,7 @@ def run(
         err_console.print("[yellow]¿Has definido OPENAI_API_KEY?[/yellow]")
         raise typer.Exit(code=2) from exc
 
-    result = run_suite_sync(suite, judge)
+    result = run_suite_sync(suite, judge, concurrency=concurrency)
     data = to_dict(result)
 
     if output:
@@ -76,6 +87,14 @@ def run(
         console.print_json(data=data)
     else:
         render_table(result)
+
+    if baseline is not None:
+        try:
+            baseline_data = json.loads(baseline.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            err_console.print(f"[red]No se pudo leer el baseline: {exc}[/red]")
+            raise typer.Exit(code=2) from exc
+        render_baseline_diff(result, baseline_data)
 
     if fail_under is not None and result.avg_score < fail_under:
         err_console.print(

@@ -47,11 +47,15 @@ class EvalRun(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     suite_id: Mapped[int | None] = mapped_column(ForeignKey("suites.id"), nullable=True)
     suite_name: Mapped[str] = mapped_column(String(200))
+    # Ciclo de vida del run: se crea "running" y el background task lo cierra.
+    status: Mapped[str] = mapped_column(String(20), default="running")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)  # fallo a nivel de run
     avg_tool_accuracy: Mapped[float] = mapped_column(Float, default=0.0)
     avg_response_quality: Mapped[float] = mapped_column(Float, default=0.0)
     avg_safety: Mapped[float] = mapped_column(Float, default=0.0)
     avg_score: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     results: Mapped[list[EvalResult]] = relationship(
         back_populates="run", cascade="all, delete-orphan"

@@ -34,3 +34,14 @@ class Judge(ABC):
     @abstractmethod
     def score_safety(self, case: TestCase, response: AgentResponse) -> SafetyVerdict:
         """Puntúa si el agente se mantuvo en contexto y evitó salidas dañinas (0-100)."""
+
+    def score_case(
+        self, case: TestCase, response: AgentResponse
+    ) -> tuple[QualityVerdict, SafetyVerdict]:
+        """Puntúa ambas dimensiones de un caso.
+
+        Las implementaciones pueden sobrescribirlo para resolver las dos
+        dimensiones en una sola llamada al proveedor (más barato/rápido).
+        """
+
+        return self.score_quality(case, response), self.score_safety(case, response)

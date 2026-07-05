@@ -1,14 +1,39 @@
 import { useEffect, useState } from "react";
-import { api, type RunDetail as RunDetailData } from "../api";
-import { DimensionBar, getFeedbackColors } from "./Score";
+import { useNavigate, useParams } from "react-router-dom";
+import { api, type RunDetail as RunDetailData, type RunSummary } from "../api";
+import { DimensionBar, StatusChip, getFeedbackColors } from "./Score";
 
-export function RunDetail({ runId, onBack }: { runId: number; onBack: () => void }) {
+export function RunDetail() {
+  const navigate = useNavigate();
+  const onBack = () => navigate("/");
+  const runId = Number(useParams().id);
   const [run, setRun] = useState<RunDetailData | null>(null);
+  const [others, setOthers] = useState<RunSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const isRunning = run?.status === "running";
+
   useEffect(() => {
-    api.getRun(runId).then(setRun).catch((e) => setError(String(e)));
-  }, [runId]);
+    const fetchRun = () => api.getRun(runId).then(setRun).catch((e) => setError(String(e)));
+    fetchRun();
+    // Mientras el run esté en curso, refresca hasta que el backend lo cierre.
+    if (!isRunning) return;
+    const timer = setInterval(fetchRun, 2000);
+    return () => clearInterval(timer);
+  }, [runId, isRunning]);
+
+  // Otros runs completados de la misma suite, para el selector "Comparar con...".
+  useEffect(() => {
+    if (!run) return;
+    api
+      .listRuns()
+      .then((all) =>
+        setOthers(
+          all.filter((r) => r.id !== run.id && r.suite_name === run.suite_name && r.status === "completed"),
+        ),
+      )
+      .catch(() => {});
+  }, [run?.id, run?.suite_name]);
 
   if (error) {
     return (
@@ -54,7 +79,35 @@ export function RunDetail({ runId, onBack }: { runId: number; onBack: () => void
             <span className="px-2.5 py-1 bg-surface-container rounded-md border border-outline-variant font-mono-code text-mono-code text-on-surface-variant">
               Run #{run.id}
             </span>
+            <StatusChip status={run.status} />
           </div>
+          {run.status === "failed" && run.error && (
+            <div className="bg-error-container text-on-error-container p-3 rounded-lg font-body-md">
+              {run.error}
+            </div>
+          )}
+          {others.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="compare-select" className="font-label-sm text-label-sm text-on-surface-variant">
+                Comparar con...
+              </label>
+              <select
+                id="compare-select"
+                defaultValue=""
+                onChange={(e) => e.target.value && navigate(`/runs/${run.id}/compare/${e.target.value}`)}
+                className="bg-surface-container border border-outline-variant rounded-lg px-3 py-1.5 font-body-md text-body-md text-on-surface"
+              >
+                <option value="" disabled>
+                  Elegir run
+                </option>
+                {others.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    Run #{r.id} · score {r.avg_score.toFixed(0)} · {new Date(r.created_at).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-on-surface-variant font-body-md text-body-md">
             <span className="material-symbols-outlined text-[16px]">calendar_today</span>
             <time dateTime={run.created_at}>
@@ -100,6 +153,13 @@ export function RunDetail({ runId, onBack }: { runId: number; onBack: () => void
             {run.results.length} casos
           </span>
         </div>
+
+        {isRunning && run.results.length === 0 && (
+          <div className="text-center py-12 text-on-surface-variant font-body-md text-body-md border border-dashed border-outline-variant rounded-2xl bg-surface-container-lowest">
+            <span className="material-symbols-outlined text-4xl mb-2 text-outline animate-spin">progress_activity</span>
+            <p>Evaluando la suite... los resultados aparecerán aquí al terminar.</p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-4">
           {run.results.map((c) => {

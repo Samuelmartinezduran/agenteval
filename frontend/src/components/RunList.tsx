@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, type RunSummary, type Suite } from "../api";
-import { ScoreBadge, getFeedbackColors } from "./Score";
+import { ScoreBadge, StatusChip, getFeedbackColors } from "./Score";
 
 // Formateador de tiempo relativo simple para la fecha
 function timeAgo(dateString: string) {
@@ -19,7 +20,9 @@ function timeAgo(dateString: string) {
   return Math.floor(seconds) + " seg";
 }
 
-export function RunList({ onOpen }: { onOpen: (id: number) => void }) {
+export function RunList() {
+  const navigate = useNavigate();
+  const onOpen = (id: number) => navigate(`/runs/${id}`);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [suites, setSuites] = useState<Suite[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +35,18 @@ export function RunList({ onOpen }: { onOpen: (id: number) => void }) {
 
   useEffect(refresh, []);
 
+  // Mientras haya runs en curso, refresca la lista para ver cuándo terminan.
+  const anyRunning = runs.some((r) => r.status === "running");
+  useEffect(() => {
+    if (!anyRunning) return;
+    const timer = setInterval(refresh, 2000);
+    return () => clearInterval(timer);
+  }, [anyRunning]);
+
   const triggerRun = async (suiteId: number) => {
     setRunning(suiteId);
     try {
+      // La API responde al instante con el run en "running"; el detalle hace polling.
       const run = await api.createRun(suiteId);
       onOpen(run.id);
     } catch (e) {
@@ -106,6 +118,7 @@ export function RunList({ onOpen }: { onOpen: (id: number) => void }) {
                 <thead>
                   <tr className="border-b border-outline-variant bg-surface-container-low">
                     <th className="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold w-1/4">Suite</th>
+                    <th className="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Estado</th>
                     <th className="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Tool accuracy</th>
                     <th className="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Response quality</th>
                     <th className="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Safety</th>
@@ -116,6 +129,7 @@ export function RunList({ onOpen }: { onOpen: (id: number) => void }) {
                 <tbody className="divide-y divide-outline-variant">
                   {runs.map((r) => {
                     const rowColors = getFeedbackColors(r.avg_score);
+                    const pending = r.status !== "completed";
                     return (
                       <tr
                         key={r.id}
@@ -130,11 +144,14 @@ export function RunList({ onOpen }: { onOpen: (id: number) => void }) {
                             </span>
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-right font-mono-code text-mono-code text-on-surface-variant">{r.avg_tool_accuracy.toFixed(0)}</td>
-                        <td className="py-4 px-6 text-right font-mono-code text-mono-code text-on-surface-variant">{r.avg_response_quality.toFixed(0)}</td>
-                        <td className="py-4 px-6 text-right font-mono-code text-mono-code text-on-surface-variant">{r.avg_safety.toFixed(0)}</td>
+                        <td className="py-4 px-6">
+                          <StatusChip status={r.status} />
+                        </td>
+                        <td className="py-4 px-6 text-right font-mono-code text-mono-code text-on-surface-variant">{pending ? "—" : r.avg_tool_accuracy.toFixed(0)}</td>
+                        <td className="py-4 px-6 text-right font-mono-code text-mono-code text-on-surface-variant">{pending ? "—" : r.avg_response_quality.toFixed(0)}</td>
+                        <td className="py-4 px-6 text-right font-mono-code text-mono-code text-on-surface-variant">{pending ? "—" : r.avg_safety.toFixed(0)}</td>
                         <td className="py-4 px-6 text-center">
-                          <ScoreBadge score={r.avg_score} />
+                          {pending ? <span className="text-on-surface-variant font-mono-code text-mono-code">—</span> : <ScoreBadge score={r.avg_score} />}
                         </td>
                         <td className="py-4 px-6 text-right font-body-md text-body-md text-on-surface-variant whitespace-nowrap">
                           Hace {timeAgo(r.created_at)}

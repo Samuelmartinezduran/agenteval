@@ -11,10 +11,15 @@ Reglas (documentadas para que sean fáciles de ajustar/contribuir):
 
 El matching de params comprueba que cada key esperada esté presente y su valor
 coincida tras normalizar (comparación case-insensitive y trim para strings).
+
+Además de la igualdad exacta, un valor esperado puede ser un matcher: un dict
+de una sola clave ``{"contains": "texto"}`` o ``{"regex": "patrón"}``. Ambos son
+case-insensitive y se aplican sobre el valor real convertido a string.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..models import ExpectedBehavior, ToolCall
@@ -28,11 +33,21 @@ def _normalize(value: Any) -> Any:
     return value
 
 
+def _value_matches(exp_value: Any, actual_value: Any) -> bool:
+    if isinstance(exp_value, dict) and len(exp_value) == 1:
+        key, arg = next(iter(exp_value.items()))
+        if key == "contains":
+            return str(arg).lower() in str(actual_value).lower()
+        if key == "regex":
+            return re.search(str(arg), str(actual_value), re.IGNORECASE) is not None
+    return _normalize(actual_value) == _normalize(exp_value)
+
+
 def _params_match(expected: dict[str, Any], actual: dict[str, Any]) -> bool:
     for key, exp_value in expected.items():
         if key not in actual:
             return False
-        if _normalize(actual[key]) != _normalize(exp_value):
+        if not _value_matches(exp_value, actual[key]):
             return False
     return True
 

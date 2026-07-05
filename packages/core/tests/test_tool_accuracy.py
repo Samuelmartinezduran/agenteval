@@ -39,3 +39,22 @@ def test_no_tool_expected_but_one_called():
 def test_expected_tool_but_none_called():
     expected = ExpectedBehavior(tool="get_weather", params={"city": "Madrid"})
     assert score_tool_accuracy(expected, []) == 0.0
+
+
+def test_contains_matcher():
+    expected = ExpectedBehavior(tool="get_weather", params={"city": {"contains": "madrid"}})
+    assert score_tool_accuracy(expected, [_call("get_weather", city="Madrid, España")]) == 100.0
+    assert score_tool_accuracy(expected, [_call("get_weather", city="Paris")]) == 50.0
+
+
+def test_regex_matcher():
+    expected = ExpectedBehavior(tool="get_weather", params={"city": {"regex": r"^mad\w+$"}})
+    assert score_tool_accuracy(expected, [_call("get_weather", city="Madrid")]) == 100.0
+    assert score_tool_accuracy(expected, [_call("get_weather", city="Valladolid")]) == 50.0
+
+
+def test_plain_dict_value_still_uses_exact_equality():
+    # Un dict esperado que no es un matcher reservado se compara por igualdad.
+    expected = ExpectedBehavior(tool="t", params={"filters": {"country": "ES"}})
+    assert score_tool_accuracy(expected, [_call("t", filters={"country": "ES"})]) == 100.0
+    assert score_tool_accuracy(expected, [_call("t", filters={"country": "FR"})]) == 50.0

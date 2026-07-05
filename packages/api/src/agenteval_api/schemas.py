@@ -68,12 +68,39 @@ class EvalRunOut(BaseModel):
     id: int
     suite_id: int | None
     suite_name: str
+    status: str
+    error: str | None
     avg_tool_accuracy: float
     avg_response_quality: float
     avg_safety: float
     avg_score: float
     created_at: datetime
+    finished_at: datetime | None
 
 
 class EvalRunDetail(EvalRunOut):
     results: list[EvalResultOut]
+
+
+# --- Comparación de runs ---------------------------------------------------
+
+
+class CaseScores(BaseModel):
+    tool_accuracy: float
+    response_quality: float
+    safety: float
+    score: float
+
+
+class CaseComparison(BaseModel):
+    case_name: str
+    # None si el caso solo existe en uno de los dos runs.
+    a: CaseScores | None
+    b: CaseScores | None
+    delta_score: float | None
+
+
+class RunComparison(BaseModel):
+    run_a: EvalRunOut
+    run_b: EvalRunOut
+    cases: list[CaseComparison]

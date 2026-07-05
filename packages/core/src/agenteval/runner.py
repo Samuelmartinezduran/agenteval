@@ -36,10 +36,7 @@ async def _run_case(suite: TestSuite, case: TestCase, judge: Judge) -> CaseResul
     # Si falla (rate limit, key inválida, red), marcamos el caso como error en
     # lugar de tumbar todo el run y perder el resto de resultados.
     try:
-        quality, safety = await asyncio.gather(
-            asyncio.to_thread(judge.score_quality, case, response),
-            asyncio.to_thread(judge.score_safety, case, response),
-        )
+        quality, safety = await asyncio.to_thread(judge.score_case, case, response)
     except Exception as exc:
         return CaseResult(
             case_name=case.name,
@@ -74,17 +71,30 @@ def _merge_reasoning(quality: str, safety: str) -> str:
     return " | ".join(parts)
 
 
-async def run_suite(suite: TestSuite, judge: Judge) -> RunResult:
-    """Ejecuta todos los casos de la suite (concurrentemente) y agrega resultados."""
+DEFAULT_CONCURRENCY = 5
 
-    results = await asyncio.gather(*(_run_case(suite, case, judge) for case in suite.cases))
+
+async def run_suite(
+    suite: TestSuite, judge: Judge, concurrency: int = DEFAULT_CONCURRENCY
+) -> RunResult:
+    """Ejecuta los casos de la suite concurrentemente (como máximo ``concurrency`` a la vez)."""
+
+    semaphore = asyncio.Semaphore(max(1, concurrency))
+
+    async def _bounded(case: TestCase) -> CaseResult:
+        async with semaphore:
+            return await _run_case(suite, case, judge)
+
+    results = await asyncio.gather(*(_bounded(case) for case in suite.cases))
     return RunResult(suite=suite.suite, results=list(results))
 
 
-def run_suite_sync(suite: TestSuite, judge: Judge) -> RunResult:
+def run_suite_sync(
+    suite: TestSuite, judge: Judge, concurrency: int = DEFAULT_CONCURRENCY
+) -> RunResult:
     """Wrapper síncrono de :func:`run_suite` para CLI/API."""
 
-    return asyncio.run(run_suite(suite, judge))
+    return asyncio.run(run_suite(suite, judge, concurrency=concurrency))
 
 
 __all__ = ["run_suite", "run_suite_sync", "AgentResponse"]
