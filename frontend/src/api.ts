@@ -68,7 +68,9 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export const api = {
-  listRuns: () => get<RunSummary[]>("/runs"),
+  // Pide el máximo que admite la API (no hay UI de paginación todavía; sin esto
+  // los runs más allá del default se perderían de la lista y del comparador).
+  listRuns: () => get<RunSummary[]>("/runs?limit=200"),
   getRun: (id: number) => get<RunDetail>(`/runs/${id}`),
   compareRuns: (a: number, b: number) => get<RunComparison>(`/runs/${a}/compare/${b}`),
   listSuites: () => get<Suite[]>("/suites"),

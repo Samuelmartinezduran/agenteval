@@ -91,6 +91,42 @@ def test_compare_runs(client, mock_agent_url):
     assert client.get(f"/runs/{id_a}/compare/999").status_code == 404
 
 
+def test_compare_rejects_unfinished_run(client, mock_agent_url, monkeypatch):
+    resp = client.post("/suites", json={"definition": _suite_definition(mock_agent_url)})
+    suite_id = resp.json()["id"]
+    ok_id = client.post("/runs", json={"suite_id": suite_id}).json()["id"]
+
+    from agenteval_api import service
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(service, "run_suite_sync", _boom)
+    bad_id = client.post("/runs", json={"suite_id": suite_id}).json()["id"]
+
+    # El run fallido no tiene resultados: comparar contra él debe dar 409, no un diff vacío.
+    assert client.get(f"/runs/{ok_id}/compare/{bad_id}").status_code == 409
+
+
+def test_fail_orphaned_runs_recovers_stuck_running():
+    from agenteval_api import models, service
+    from agenteval_api.db import SessionLocal
+
+    db = SessionLocal()
+    try:
+        run = models.EvalRun(suite_name="x", status="running")
+        db.add(run)
+        db.commit()
+
+        assert service.fail_orphaned_runs(db) == 1
+        db.refresh(run)
+        assert run.status == "failed"
+        assert run.finished_at is not None
+        assert run.error and "reinici" in run.error.lower()
+    finally:
+        db.close()
+
+
 def test_list_runs_pagination(client, mock_agent_url):
     resp = client.post("/suites", json={"definition": _suite_definition(mock_agent_url)})
     suite_id = resp.json()["id"]

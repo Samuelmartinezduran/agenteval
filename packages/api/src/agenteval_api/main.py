@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import service
 from .config import settings
 from .db import SessionLocal
 from .routers import agents, runs, suites
@@ -17,9 +18,13 @@ from .seed import maybe_seed
 async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
+        # Cierra runs que quedaron 'running' si la API se reinició a mitad.
+        failed = service.fail_orphaned_runs(db)
+        if failed:
+            print(f"[agenteval] {failed} run(s) huérfano(s) marcados como fallidos")
         maybe_seed(db)
-    except Exception as exc:  # noqa: BLE001 - el seed nunca debe tumbar la API
-        print(f"[agenteval] seed omitido: {exc}")
+    except Exception as exc:  # noqa: BLE001 - el arranque nunca debe tumbar la API
+        print(f"[agenteval] arranque parcial: {exc}")
     finally:
         db.close()
     yield

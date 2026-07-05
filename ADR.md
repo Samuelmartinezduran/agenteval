@@ -10,6 +10,21 @@
 - **Reason:** El frontend necesita distinguir "en curso" de "terminado" para el polling; los errores por caso ya se guardan en `eval_results.error`.
 - **Source:** Agent assumption
 
+## Recuperación de runs huérfanos al arrancar
+- **Decisión:** En el `lifespan` de la API, `fail_orphaned_runs` marca como `failed` cualquier run que quedara `running`.
+- **Reason:** Los BackgroundTasks viven en memoria; si el proceso se reinicia a mitad de un run, su fila quedaría `running` para siempre y el frontend haría polling indefinido. Barrido al arranque en lugar de un heartbeat/timeout persistente (innecesario para el modelo in-process).
+- **Source:** Agent assumption (hallazgo de code review)
+
+## Comparar solo runs completados
+- **Decisión:** `GET /runs/{id}/compare/{other}` responde 409 si alguno de los dos runs no está `completed`.
+- **Reason:** Un run sin terminar no tiene resultados; compararlo devolvería deltas engañosos (todos los casos a un lado). El frontend además filtra el selector por `suite_id`.
+- **Source:** Agent assumption (hallazgo de code review)
+
+## Limitación conocida: BackgroundTasks y el threadpool de anyio
+- **Decisión:** Se mantiene `BackgroundTasks` (función síncrona → threadpool compartido de anyio, ~40 tokens). NO resuelto en esta iteración.
+- **Reason:** Bajo muchísimos runs concurrentes el pool podría saturarse y estrangular endpoints síncronos. Migrar a un executor dedicado o cola exige rehacer el timing de los tests (que dependen de que TestClient ejecute el task de forma síncrona); se difiere hasta que el volumen lo justifique.
+- **Source:** Agent assumption (hallazgo de code review, diferido)
+
 ## Concurrencia limitada en el runner (default 5)
 - **Decisión:** `run_suite` acepta `concurrency` (semáforo asyncio), expuesto como `--concurrency` en la CLI y `AGENTEVAL_CONCURRENCY` en la API.
 - **Reason:** `asyncio.gather` sin límite disparaba todos los casos a la vez → rate limits del agente y del juez garantizados en suites grandes.

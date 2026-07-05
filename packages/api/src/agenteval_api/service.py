@@ -14,11 +14,32 @@ from datetime import datetime, timezone
 
 from agenteval import TestSuite, run_suite_sync
 from agenteval.judge.base import Judge
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .config import settings
 from .db import SessionLocal
+
+
+def fail_orphaned_runs(db: Session) -> int:
+    """Marca como 'failed' los runs que quedaron 'running' de un proceso anterior.
+
+    Los BackgroundTasks viven en memoria: si la API se reinicia con un run en
+    curso, su fila quedaría 'running' para siempre y el frontend haría polling
+    indefinido. Al arrancar los cerramos como fallidos. Devuelve cuántos cerró.
+    """
+
+    orphaned = db.scalars(
+        select(models.EvalRun).where(models.EvalRun.status == "running")
+    ).all()
+    for run in orphaned:
+        run.status = "failed"
+        run.error = "Interrumpido: la API se reinició mientras el run estaba en curso."
+        run.finished_at = datetime.now(timezone.utc)
+    if orphaned:
+        db.commit()
+    return len(orphaned)
 
 
 def _load_judge() -> Judge:

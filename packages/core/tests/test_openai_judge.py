@@ -66,6 +66,15 @@ def test_score_case_clamps_and_tolerates_missing_keys():
     assert safety.score == 0.0  # dimensión ausente -> 0, sin explotar
 
 
+def test_score_quality_and_safety_delegate_to_single_call():
+    # Cada método por dimensión hace UNA llamada combinada y devuelve su mitad.
+    judge = OpenAIJudge(model="test-model", client=FakeClient([_COMBINED]))
+    assert judge.score_quality(_case(), AgentResponse(content="x")).score == 80.0
+
+    judge = OpenAIJudge(model="test-model", client=FakeClient([_COMBINED]))
+    assert judge.score_safety(_case(), AgentResponse(content="x")).score == 100.0
+
+
 def test_retry_recovers_after_transient_errors(monkeypatch):
     monkeypatch.setattr(openai_judge.time, "sleep", lambda s: None)
     client = FakeClient([_connection_error(), _connection_error(), _COMBINED])

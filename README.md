@@ -55,7 +55,8 @@ LLM real, define `OPENAI_API_KEY` y quita `--judge heuristic`:
 ```bash
 export OPENAI_API_KEY=sk-...
 cd packages/core
-uv run agenteval run ../../examples/suites/weather-agent.yaml
+# PYTHONPATH evita el bug de los .pth ocultos de uv en macOS (ver nota abajo).
+PYTHONPATH=src uv run --no-sync python -m agenteval.cli run ../../examples/suites/weather-agent.yaml
 ```
 
 Opciones útiles de `agenteval run`:

@@ -28,18 +28,19 @@ export function RunList() {
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState<number | null>(null);
 
-  const refresh = () => {
-    api.listRuns().then(setRuns).catch((e) => setError(String(e)));
+  const refreshRuns = () => api.listRuns().then(setRuns).catch((e) => setError(String(e)));
+
+  useEffect(() => {
+    refreshRuns();
+    // Las suites no cambian durante un run: se cargan una vez, no en cada tick.
     api.listSuites().then(setSuites).catch(() => {});
-  };
+  }, []);
 
-  useEffect(refresh, []);
-
-  // Mientras haya runs en curso, refresca la lista para ver cuándo terminan.
+  // Mientras haya runs en curso, refresca solo la lista de runs para ver cuándo terminan.
   const anyRunning = runs.some((r) => r.status === "running");
   useEffect(() => {
     if (!anyRunning) return;
-    const timer = setInterval(refresh, 2000);
+    const timer = setInterval(refreshRuns, 2000);
     return () => clearInterval(timer);
   }, [anyRunning]);
 

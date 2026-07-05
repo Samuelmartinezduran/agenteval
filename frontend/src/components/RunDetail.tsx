@@ -23,17 +23,19 @@ export function RunDetail() {
   }, [runId, isRunning]);
 
   // Otros runs completados de la misma suite, para el selector "Comparar con...".
+  // Filtra por suite_id (clave estable); solo cae a suite_name en runs antiguos
+  // sin suite_id. Así no se ofrecen suites distintas que comparten nombre.
   useEffect(() => {
     if (!run) return;
+    const sameSuite = (r: RunSummary) =>
+      run.suite_id != null ? r.suite_id === run.suite_id : r.suite_name === run.suite_name;
     api
       .listRuns()
       .then((all) =>
-        setOthers(
-          all.filter((r) => r.id !== run.id && r.suite_name === run.suite_name && r.status === "completed"),
-        ),
+        setOthers(all.filter((r) => r.id !== run.id && sameSuite(r) && r.status === "completed")),
       )
       .catch(() => {});
-  }, [run?.id, run?.suite_name]);
+  }, [run?.id, run?.suite_id, run?.suite_name]);
 
   if (error) {
     return (

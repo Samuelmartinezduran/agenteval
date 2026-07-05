@@ -53,6 +53,13 @@ def test_regex_matcher():
     assert score_tool_accuracy(expected, [_call("get_weather", city="Valladolid")]) == 50.0
 
 
+def test_invalid_regex_does_not_crash_the_run():
+    # Una regex mal formada en la suite no debe propagar re.error: se trata como
+    # "no coincide" (params incorrectos), no como un fallo del run.
+    expected = ExpectedBehavior(tool="get_weather", params={"city": {"regex": "["}})
+    assert score_tool_accuracy(expected, [_call("get_weather", city="Madrid")]) == 50.0
+
+
 def test_plain_dict_value_still_uses_exact_equality():
     # Un dict esperado que no es un matcher reservado se compara por igualdad.
     expected = ExpectedBehavior(tool="t", params={"filters": {"country": "ES"}})

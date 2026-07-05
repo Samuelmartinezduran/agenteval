@@ -39,7 +39,12 @@ def _value_matches(exp_value: Any, actual_value: Any) -> bool:
         if key == "contains":
             return str(arg).lower() in str(actual_value).lower()
         if key == "regex":
-            return re.search(str(arg), str(actual_value), re.IGNORECASE) is not None
+            # Una regex mal formada en la suite no debe tumbar el run entero:
+            # se trata como "no coincide" (el caso puntúa como params incorrectos).
+            try:
+                return re.search(str(arg), str(actual_value), re.IGNORECASE) is not None
+            except re.error:
+                return False
     return _normalize(actual_value) == _normalize(exp_value)
 
 

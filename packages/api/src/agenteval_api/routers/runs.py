@@ -58,4 +58,10 @@ def get_run(run_id: int, db: Session = Depends(get_db)):
 def compare_runs(run_id: int, other_id: int, db: Session = Depends(get_db)):
     run_a = _get_run_with_results(db, run_id)
     run_b = _get_run_with_results(db, other_id)
+    # Comparar un run sin terminar daría deltas engañosos (sin resultados aún).
+    for run in (run_a, run_b):
+        if run.status != "completed":
+            raise HTTPException(
+                409, f"El run {run.id} no está completado (status={run.status})."
+            )
     return service.compare_runs(run_a, run_b)
